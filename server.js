@@ -8,7 +8,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:3000", // The URL of your React app
+    origin: "https://drawing-socket.vercel.app/", // The URL of your React app
     methods: ["GET", "POST"]
   }
 });
