@@ -2,39 +2,50 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const mongoose = require('mongoose');
-const cors = require('cors'); // Import cors middleware
+const dotenv = require('dotenv');
+const cors = require('cors');
+
+dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "https://drawing-socket.vercel.app/", // The URL of your React app
+    origin: process.env.LOCAL || "https://drawing-socket.vercel.app/",
     methods: ["GET", "POST"]
   }
 });
 
-// Enable CORS
 app.use(cors());
-
-mongoose.connect('mongodb+srv://afrin:961215106001@cluster0.hbkqtqv.mongodb.net/jamboard', { useNewUrlParser: true, useUnifiedTopology: true });
-
 app.use(express.json());
+
+mongoose.connect(process.env.DB || 'mongodb+srv://afrin:961215106001@cluster0.hbkqtqv.mongodb.net/jamboard', { useNewUrlParser: true, useUnifiedTopology: true });
 
 app.get('/', (req, res) => {
   res.send('Server is running');
 });
 
-io.on('connection', (socket) => {
-  console.log('a user connected');
+let connectedUsers = 0;
 
+io.on('connection', (socket) => {
+  connectedUsers++;
+  console.log('a user connected. Total users:', connectedUsers);
+  
+  // Broadcast user count to all connected clients
+  io.emit('userCount', connectedUsers);
+
+  // Handle drawing events
   socket.on('drawing', (data) => {
     socket.broadcast.emit('drawing', data);
   });
 
+  // Handle user disconnect
   socket.on('disconnect', () => {
-    console.log('user disconnected');
+    connectedUsers--;
+    console.log('user disconnected. Total users:', connectedUsers);
+    io.emit('userCount', connectedUsers);
   });
 });
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
